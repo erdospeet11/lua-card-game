@@ -36,9 +36,21 @@ function scene.mousepressed(x, y, button)
     end
 end
 
+function scene.mousereleased(x, y, button)
+    if scene.current and scene.current.mousereleased then
+        scene.current.mousereleased(x, y, button)
+    end
+end
+
 function scene.keypressed(key)
     if scene.current and scene.current.keypressed then
         scene.current.keypressed(key)
+    end
+end
+
+function scene.wheelmoved(x, y)
+    if scene.current and scene.current.wheelmoved then
+        scene.current.wheelmoved(x, y)
     end
 end
 

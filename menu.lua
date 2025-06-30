@@ -12,7 +12,7 @@ local button = {
     y = 0,
     width = 200,
     height = 60,
-    text = "BATTLE",
+    text = "SCENARIOS",
     hovered = false
 }
 
