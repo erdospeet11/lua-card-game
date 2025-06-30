@@ -1,0 +1,66 @@
+-- occultist_enemy.lua
+-- Aggressive enemy that inherits default Enemy behaviour
+
+local Enemy = require('enemy')
+local lg = love.graphics
+
+local OccultistEnemy = setmetatable({}, { __index = Enemy })
+OccultistEnemy.__index = OccultistEnemy
+
+function OccultistEnemy:new(x, y, width, height, required_seals)
+    required_seals = required_seals or 1
+
+    local obj = Enemy.new(self, x, y, width, height)
+    obj.class_name = "Occultist"
+    obj.required_seals = required_seals
+
+    -- Objective: player possesses at least `required_seals` Seal cards (ID 1)
+    obj:set_objective(function(hand, deck)
+        local count = 0
+        for _, c in ipairs(hand:get_cards()) do
+            if c.id == 1 then count = count + 1 end
+        end
+        if deck and deck.cards then
+            for _, c in ipairs(deck.cards) do
+                if c.id == 1 then count = count + 1 end
+            end
+        end
+        return count >= required_seals
+    end)
+
+    obj:set_defeat_text(tostring(required_seals) .. "x Seal")
+
+    -- Load sprite once
+    if not OccultistEnemy._sprite then
+        OccultistEnemy._sprite = lg.newImage("characters/occultist.png")
+    end
+    obj.sprite = OccultistEnemy._sprite
+
+    return obj
+end
+
+-- Override defeat check: quit game when objective met
+function OccultistEnemy:is_defeated(hand, deck)
+    if self.defeated then return true end
+    local ok = self.objective_fn and self.objective_fn(hand, deck)
+    if ok then
+        self.defeated = true
+        print("Occultist defeated – " .. tostring(self.required_seals) .. " Seal(s) obtained.")
+        return true
+    end
+    return false
+end
+
+-- Draw using sprite
+function OccultistEnemy:draw()
+    if self.sprite then
+        local sx = self.width / self.sprite:getWidth()
+        local sy = self.height / self.sprite:getHeight()
+        lg.setColor(1,1,1,1)
+        lg.draw(self.sprite, self.x - self.width/2, self.y - self.height/2, 0, sx, sy)
+    else
+        Enemy.draw(self)
+    end
+end
+
+return OccultistEnemy 
