@@ -54,4 +54,10 @@ function scene.wheelmoved(x, y)
     end
 end
 
+function scene.textinput(text)
+    if scene.current and scene.current.textinput then
+        scene.current.textinput(text)
+    end
+end
+
 return scene 

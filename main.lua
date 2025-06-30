@@ -31,3 +31,7 @@ end
 function love.mousereleased(x, y, button)
     Scene.mousereleased(x, y, button)
 end
+
+function love.textinput(text)
+    Scene.textinput(text)
+end

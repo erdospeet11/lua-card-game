@@ -39,33 +39,15 @@ District 04 has been overrun by the Everblood Cult—an extremist group blending
 You are a thaumaturge, trained to identify and neutralize dangerous tech. Your mission is to investigate the cult's hideout, locate any devices or artifacts that pose a threat to public safety, and seal them before they can spread further harm.
 
 Tensions are rising, and the invasion of Erebos looms on the horizon. What you uncover here could determine what comes next.]],
-    [[Athens, 430 B.C.
-
-The Peloponnesian War rages just beyond the Long Walls. Inside, a choking plague turns bustling agoras into funeral processions. Philosophers debate fate and duty, their words echoing off empty stoa. Hoplites sharpen spears on the Pnyx, yet dread rather than glory hangs over the polis.]],
-    [[Alexandria, 30 B.C.
-
-Pharos lighthouse still blazes, guiding ships to the greatest library the world has known, but scrolls are being packed for flight. Cleopatra, last of the Ptolemies, weighs surrender against legend as Octavian's legions draw near. Palm-lined streets bustle, unaware how close they stand to empire's twilight.]],
-    [[Sparta, 480 B.C.
-
-Bronze shields clatter in rigorous cadence. Blood-red cloaks billow as King Leonidas chooses three-hundred warriors for a desperate stand at Thermopylae. Mothers mix pride with foreboding; helots whisper of prophecy. The scent of olive groves cannot mask the iron tang of destiny.]],
-    [[Babylon, 600 B.C.
-
-Nebuchadnezzar II oversees terraced gardens that defy desert winds—hanging wonders dripping with jasmine and cypress. Along the Processional Way, blue-glazed lions guard Ishtar Gate while astronomers chart wandering stars atop ziggurats, convinced they converse with gods themselves.]],
-    [[Constantinople, 1453 A.D.
-
-Gunpowder smoke clouds the Golden Horn. Inside Hagia Sophia candles burn day and night as citizens pray for deliverance. Outside, Mehmet's cannons hammer ancient walls that once defied a thousand sieges. The last ember of Rome flickers, poised between legend and conquest.]],
-    [[Paris, 1789 A.D.
-
-Bread lines snake beneath Gothic spires; words like "liberté" ignite salons and taverns alike. The Bastille's shadow looms, both prison and symbol. Aristocrats plan midnight departures while pamphleteers ink manifestos promising a dawn of equality—by guillotine if need be.]],
-    [[London, 1666 A.D.
-
-Summer drought has turned timber houses into tinder. From Pudding Lane a spark leaps, racing across thatched roofs. Samuel Pepys scribbles frantically as firestorms light the night sky. On the Thames, panicked barges ferry goods while St. Paul's future hangs in ash-choked air.]],
-    [[New York, 1920 A.D.
-
-Prohibition's ban can't silence Harlem's trumpets. Elevated trains rattle above streets where flappers dodge Model-T traffic. Rum-runners offload crates on foggy piers, and somewhere in a smoke-filled backroom, a young Fitzgerald drafts the Jazz Age into immortality.]],
-    [[Kyoto, 1600 A.D.
-
-Maple leaves drift through crimson gates of Fushimi Castle as Tokugawa forces march west. Tea masters prepare ceremonies in fragile stillness, unaware that Sekigahara's battle will redraw the realm by dawn. Lanterns glow along silent canals, reflecting an era's final breaths.]],
+    [[Locked]],
+    [[Locked]],
+    [[Locked]],
+    [[Locked]],
+    [[Locked]],
+    [[Locked]],
+    [[Locked]],
+    [[Locked]],
+    [[Locked]],
 }
 
 local TOTAL_BUTTONS = #descriptions
