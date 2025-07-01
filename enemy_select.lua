@@ -1,7 +1,3 @@
--- enemy_select.lua
--- Scenario selection scene with scrollable list of scenarios.
--- First scenario starts a battle against the Occultist enemy.
-
 local Scene       = require('scene')
 local BattleScene = require('battle')
 
@@ -14,10 +10,9 @@ local BUTTON_WIDTH       = 300
 local BUTTON_HEIGHT      = 80
 local BUTTON_MARGIN      = 12
 local CONTAINER_PADDING  = 24
-local VISIBLE_COUNT      = 4        -- how many buttons visible at once
+local VISIBLE_COUNT      = 4
 local SLIDER_WIDTH       = 12
 
--- Colours (r,g,b,a)
 local COLORS = {
     background       = {0.15, 0.15, 0.18},
     container        = {0.22, 0.22, 0.28},
@@ -28,9 +23,6 @@ local COLORS = {
     battleBtnHover   = {0.55, 0.55, 0.7 },
 }
 
-----------------------------------------------------------
--- DATA
-----------------------------------------------------------
 local descriptions = {
     [[Riverton, 2027 A.D.
 
@@ -52,35 +44,27 @@ Tensions are rising, and the invasion of Erebos looms on the horizon. What you u
 
 local TOTAL_BUTTONS = #descriptions
 
--- Pre-computed titles (first line of each description)
 local titles = {}
 for i, desc in ipairs(descriptions) do
     local first_line = desc:match("(.-)\n") or string.format("Scenario %d", i)
     titles[i] = first_line
 end
 
--- scenario to enemy map: only first scenario implemented
 local scenario_enemy = {
     [1] = "occultist"
 }
 
--- runtime state
 local buttons = {}
 local container = {x = 0, y = 0, w = 0, h = 0}
 local scrollY = 0
 local draggingSlider = false
 local sliderGrabOffset = 0
-local currentIdx = nil        -- currently selected scenario index
+local currentIdx = nil
 
--- battle button properties
 local battleButton = {w = 220, h = 60, x = 0, y = 0, hover = false}
 
--- texture placeholders (filled in enter)
 local rivertonTexture, defaultTexture
 
-----------------------------------------------------------
--- Helper functions
-----------------------------------------------------------
 local function build_buttons()
     buttons = {}
     for i = 1, TOTAL_BUTTONS do
@@ -88,13 +72,9 @@ local function build_buttons()
     end
 end
 
-----------------------------------------------------------
--- Scene lifecycle
-----------------------------------------------------------
 function enemy_select.enter()
     local sw, sh = love.graphics.getWidth(), love.graphics.getHeight()
 
-    -- Build UI geometry.
     container.w = BUTTON_WIDTH + CONTAINER_PADDING * 2 + SLIDER_WIDTH
     container.h = VISIBLE_COUNT * BUTTON_HEIGHT + (VISIBLE_COUNT - 1) * BUTTON_MARGIN + CONTAINER_PADDING * 2
     container.x = 40
@@ -102,7 +82,6 @@ function enemy_select.enter()
 
     build_buttons()
 
-    -- Pre-compute button base positions
     local startY = container.y + CONTAINER_PADDING
     for i, btn in ipairs(buttons) do
         btn.x = container.x + CONTAINER_PADDING
@@ -115,7 +94,6 @@ function enemy_select.enter()
     currentIdx = nil
     draggingSlider = false
 
-    -- Load textures once
     if not rivertonTexture then
         pcall(function() rivertonTexture = love.graphics.newImage("scenarios/riverton.png") end)
     end
@@ -127,7 +105,6 @@ end
 function enemy_select.update(dt)
     local mx, my = love.mouse.getPosition()
 
-    -- Slider dragging
     if draggingSlider then
         local trackY = container.y + CONTAINER_PADDING
         local trackH = container.h - CONTAINER_PADDING * 2
@@ -139,14 +116,12 @@ function enemy_select.update(dt)
         scrollY = t * maxScroll
     end
 
-    -- Update hover states on buttons
     for _, btn in ipairs(buttons) do
         local drawY = btn.baseY - scrollY
         btn.drawY = drawY
         btn.hover = mx >= btn.x and mx <= btn.x + btn.w and my >= drawY and my <= drawY + btn.h
     end
 
-    -- Update battle button hover when description shown
     if currentIdx then
         local textX = container.x + container.w + 40
         local rightPadding = 40
@@ -164,28 +139,23 @@ end
 function enemy_select.draw()
     love.graphics.setBackgroundColor(COLORS.background)
 
-    -- Container background
     love.graphics.setColor(COLORS.container)
     love.graphics.rectangle("fill", container.x, container.y, container.w, container.h, 8, 8)
     love.graphics.setColor(COLORS.containerLine)
     love.graphics.setLineWidth(2)
     love.graphics.rectangle("line", container.x, container.y, container.w, container.h, 8, 8)
 
-    -- Scissor inside container (exclude slider)
     local clipX = container.x + CONTAINER_PADDING
     local clipY = container.y + CONTAINER_PADDING
     local clipW = BUTTON_WIDTH
     local clipH = container.h - CONTAINER_PADDING * 2
     love.graphics.setScissor(clipX, clipY, clipW, clipH)
 
-    -- Draw buttons
     for _, btn in ipairs(buttons) do
         local y = btn.drawY
         if y + btn.h >= clipY and y <= clipY + clipH then
-            -- Draw texture background if available
             local tex = (btn.index == 1) and rivertonTexture or defaultTexture
             if tex then
-                -- Clip to the intersection of button rect and container clip so nothing bleeds while scrolling
                 local sx = math.max(btn.x, clipX)
                 local sy = math.max(y, clipY)
                 local ex = math.min(btn.x + btn.w, clipX + clipW)
@@ -197,20 +167,18 @@ function enemy_select.draw()
                 end
                 love.graphics.setColor(1, 1, 1)
                 local texW, texH = tex:getDimensions()
-                local scale = math.max(btn.w / texW, btn.h / texH) -- cover
+                local scale = math.max(btn.w / texW, btn.h / texH)
                 local drawW = texW * scale
                 local drawH = texH * scale
                 local offsetX = btn.x + (btn.w - drawW) / 2
                 local offsetY = y + (btn.h - drawH) / 2
                 love.graphics.draw(tex, offsetX, offsetY, 0, scale, scale)
-                -- Restore container scissor
                 love.graphics.setScissor(clipX, clipY, clipW, clipH)
             else
                 love.graphics.setColor(0.45, 0.45, 0.55)
                 love.graphics.rectangle("fill", btn.x, y, btn.w, btn.h, 6, 6)
             end
 
-            -- Overlay tint for hover/idle
             if btn.hover then
                 love.graphics.setColor(COLORS.buttonHoverTint)
             else
@@ -218,12 +186,10 @@ function enemy_select.draw()
             end
             love.graphics.rectangle("fill", btn.x, y, btn.w, btn.h, 6, 6)
 
-            -- Outline
             love.graphics.setColor(0, 0, 0, 0.6)
             love.graphics.setLineWidth(1)
             love.graphics.rectangle("line", btn.x, y, btn.w, btn.h, 6, 6)
 
-            -- Title text (centered)
             local title = titles[btn.index] or ("Scenario " .. btn.index)
             local font = love.graphics.getFont()
             local tw = font:getWidth(title)
@@ -231,27 +197,23 @@ function enemy_select.draw()
             local textX = btn.x + (btn.w - tw) / 2
             local textY = y + (btn.h - th) / 2
 
-            -- Draw background rectangle behind text
             local pad = 4
             love.graphics.setColor(0, 0, 0, 0.7)
             love.graphics.rectangle("fill", textX - pad, textY - pad, tw + pad * 2, th + pad * 2)
 
-            -- Draw text (white for readability)
             love.graphics.setColor(1, 1, 1)
             love.graphics.print(title, textX, textY)
         end
     end
 
-    love.graphics.setScissor() -- disable scissor
+    love.graphics.setScissor()
 
-    -- Slider track
     local trackX = container.x + container.w - SLIDER_WIDTH - CONTAINER_PADDING / 2
     local trackY = container.y + CONTAINER_PADDING
     local trackH = container.h - CONTAINER_PADDING * 2
     love.graphics.setColor(0, 0, 0, 0.2)
     love.graphics.rectangle("fill", trackX, trackY, SLIDER_WIDTH, trackH, 6, 6)
 
-    -- Slider knob
     local knobH = math.max(20, trackH * (VISIBLE_COUNT / TOTAL_BUTTONS))
     local maxScroll = (TOTAL_BUTTONS - VISIBLE_COUNT) * (BUTTON_HEIGHT + BUTTON_MARGIN)
     local t = (maxScroll == 0) and 0 or (scrollY / maxScroll)
@@ -262,7 +224,6 @@ function enemy_select.draw()
     love.graphics.setLineWidth(1)
     love.graphics.rectangle("line", trackX, knobY, SLIDER_WIDTH, knobH, 6, 6)
 
-    -- Description on right side
     if currentIdx then
         local desc = descriptions[currentIdx] or "No description."
         local textX = container.x + container.w + 40
@@ -271,7 +232,6 @@ function enemy_select.draw()
         love.graphics.setColor(1, 1, 1)
         love.graphics.printf(desc, textX, textY, textW)
 
-        -- Battle button
         if battleButton.hover then
             love.graphics.setColor(COLORS.battleBtnHover)
         else
@@ -290,12 +250,8 @@ function enemy_select.draw()
     end
 end
 
-----------------------------------------------------------
--- Input handlers
-----------------------------------------------------------
 function enemy_select.mousepressed(x, y, button)
     if button == 1 then
-        -- Check battle button first if visible
         if currentIdx and battleButton.hover then
             local enemy_key = scenario_enemy[currentIdx]
             if enemy_key then
@@ -306,7 +262,6 @@ function enemy_select.mousepressed(x, y, button)
             return
         end
 
-        -- Slider knob check
         local trackX = container.x + container.w - SLIDER_WIDTH - CONTAINER_PADDING / 2
         local trackY = container.y + CONTAINER_PADDING
         local trackH = container.h - CONTAINER_PADDING * 2
@@ -320,7 +275,6 @@ function enemy_select.mousepressed(x, y, button)
             return
         end
 
-        -- Check buttons list
         for _, btn in ipairs(buttons) do
             if x >= btn.x and x <= btn.x + btn.w and y >= btn.drawY and y <= btn.drawY + btn.h then
                 currentIdx = btn.index
@@ -340,7 +294,7 @@ function enemy_select.wheelmoved(_, dy)
     if dy ~= 0 then
         local maxScroll = (TOTAL_BUTTONS - VISIBLE_COUNT) * (BUTTON_HEIGHT + BUTTON_MARGIN)
         if maxScroll <= 0 then return end
-        scrollY = scrollY - dy * BUTTON_HEIGHT -- one button per wheel notch
+        scrollY = scrollY - dy * BUTTON_HEIGHT
         scrollY = math.max(0, math.min(maxScroll, scrollY))
     end
 end

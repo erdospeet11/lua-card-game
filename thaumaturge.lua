@@ -1,20 +1,14 @@
--- thaumaturge.lua
--- Player subclass representing the Thaumaturge (the player character)
-
 local Player = require('player')
 local lg = love.graphics
 
-local Thaumaturge = setmetatable({}, { __index = Player })
-Thaumaturge.__index = Thaumaturge
+local Thaumaturge = Player:subclass('Thaumaturge')
 
-function Thaumaturge:new(x, y, width, height, deck_ref)
-    local obj = Player.new(self, x, y, width, height)
-    obj.class_name = "Thaumaturge"
-    obj.deck_ref = deck_ref
-    return obj
+function Thaumaturge:initialize(x, y, width, height, deck_ref)
+    Player.initialize(self, x, y, width, height)
+    self.class_name = "Thaumaturge"
+    self.deck_ref = deck_ref
 end
 
--- Draw using card back image
 function Thaumaturge:draw()
     if CardBack then
         local sx = self.width / CardBack:getWidth()

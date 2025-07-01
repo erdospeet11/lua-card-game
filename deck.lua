@@ -1,21 +1,15 @@
--- Deck.lua - simple deck object for storing and drawing cards
-local Deck = {}
+local middleclass = require('middle_class')
 
-function Deck:new()
-    local self = {}
-    setmetatable(self, { __index = Deck })
+local Deck = middleclass.class('Deck')
 
-    -- Internal list of card objects (top of deck is at the end of the table)
+function Deck:initialize()
     self.cards = {}
-    return self
 end
 
--- Add a card object to the bottom of the deck
 function Deck:add_card(card)
-    table.insert(self.cards, 1, card) -- insert at bottom (index 1)
+    table.insert(self.cards, 1, card)
 end
 
--- Shuffle the deck using Fisher–Yates algorithm
 function Deck:shuffle()
     for i = #self.cards, 2, -1 do
         local j = love.math.random(i)
@@ -23,10 +17,9 @@ function Deck:shuffle()
     end
 end
 
--- Draw a card from the top of the deck (end of the table)
 function Deck:draw_card()
     if #self.cards == 0 then return nil end
-    return table.remove(self.cards) -- removes last element (top)
+    return table.remove(self.cards)
 end
 
 function Deck:size()

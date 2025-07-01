@@ -1,9 +1,5 @@
--- battle.lua
--- Battle scene extracted from previous main.lua
-
 local battle = {}
 
--- Bring in required modules
 require('card')
 require('board')
 require('hand')
@@ -11,29 +7,23 @@ local card_bank = require('card_bank')
 local Deck = require('deck')
 local Scene = require('scene')
 
--- Character modules
 local OccultistEnemyClass = require('occultist_enemy')
 local PlayerClass = require('thaumaturge')
 
--- Local state variables
 local player_hand, player_deck
 local player_character, enemy_character
 local combine_button = {}
 local discard_button = {}
 
--- Enemy overlay vars
 local enemy_message_active = false
 local enemy_message_text = ""
 local current_turn = 1
 
--- Victory popup vars
 local victory_active = false
 local victory_text = ""
 
--- Debug panel toggle
 local debug_visible = false
 
--- Floating text window state
 local text_window = {
     x = 100, y = 100,
     width = 300, height = 200,
@@ -48,7 +38,6 @@ local text_window = {
     resize_handle_size = 15
 }
 
--- Forward declarations
 local draw_player_tooltip, draw_debug_panel, draw_enemy_message, draw_victory_popup, draw_text_window
 
 local defeat_font = love.graphics.newFont(20)
@@ -60,21 +49,16 @@ local function show_enemy_message(msg)
     end
 end
 
----------------------------------------------------------------------
--- SCENE LIFECYCLE --------------------------------------------------
----------------------------------------------------------------------
 function battle.enter(enemy_key)
-    -- Load assets first
     CardBack = love.graphics.newImage("card-back.png")
 
     print("Card-back.png dimensions: " .. CardBack:getWidth() .. "x" .. CardBack:getHeight())
 
     card_bank.load_face_images()
 
-    player_hand = Hand:new()
+    player_hand = Hand()
 
-    -- Deck setup (20 cards total)
-    player_deck = Deck:new()
+    player_deck = Deck()
 
     local function add_multiple(id, count)
         for i = 1, count do
@@ -83,11 +67,11 @@ function battle.enter(enemy_key)
         end
     end
 
-    add_multiple(6, 4) -- Scripture
-    add_multiple(7, 4) -- Innervate
-    add_multiple(2, 4) -- Release Talisman
-    add_multiple(3, 4) -- Binding Talisman
-    add_multiple(5, 4) -- Small Trove
+    add_multiple(6, 4)
+    add_multiple(7, 4)
+    add_multiple(2, 4)
+    add_multiple(3, 4)
+    add_multiple(5, 4)
     player_deck:shuffle()
 
     for i = 1, 6 do
@@ -95,7 +79,6 @@ function battle.enter(enemy_key)
         if drawn then player_hand:add_card(drawn) end
     end
 
-    -- Buttons
     combine_button.width = 120
     combine_button.height = 50
     combine_button.x = love.graphics.getWidth() - combine_button.width - 30
@@ -110,15 +93,14 @@ function battle.enter(enemy_key)
     discard_button.text = "DISCARD"
     discard_button.is_hovered = false
 
-    -- Characters
     local sw, sh = love.graphics.getWidth(), love.graphics.getHeight()
-    player_character = PlayerClass:new(sw / 2, sh - 100, 120, 160, player_deck)
+    player_character = PlayerClass(sw / 2, sh - 100, 120, 160, player_deck)
 
     local enemy_map = {
         occultist = OccultistEnemyClass
     }
     local EnemyClass = enemy_map[enemy_key]
-    enemy_character = EnemyClass:new(sw / 2, 120, 120, 160)
+    enemy_character = EnemyClass(sw / 2, 120, 120, 160)
 
     current_turn = 1
 end
@@ -136,13 +118,11 @@ function battle.update(dt)
     discard_button.is_hovered = mx >= discard_button.x and mx <= discard_button.x + discard_button.width and
                                my >= discard_button.y and my <= discard_button.y + discard_button.height
 
-    -- Handle text window dragging
     if text_window.dragging then
         text_window.x = mx - text_window.drag_offset_x
         text_window.y = my - text_window.drag_offset_y
     end
 
-    -- Handle text window resizing
     if text_window.resizing then
         local new_width = mx - text_window.x
         local new_height = my - text_window.y
@@ -155,13 +135,11 @@ function battle.draw()
     love.graphics.clear(0.1, 0.1, 0.1)
 
     enemy_character:draw()
-    -- Show tooltip on hover
     if enemy_character.is_hovered then draw_enemy_hover() end
     player_character:draw()
 
     player_hand:draw()
 
-    -- Buttons
     local function draw_combine_button()
         if combine_button.is_hovered then
             love.graphics.setColor(0.3, 0.3, 0.3, 0.9)
@@ -197,14 +175,12 @@ function battle.draw()
     draw_combine_button()
     draw_discard_button()
 
-    -- Panels
     if debug_visible then draw_debug_panel() end
     draw_text_window()
     if player_character.is_hovered then draw_player_tooltip() end
     if enemy_message_active then draw_enemy_message() end
     if victory_active then draw_victory_popup() end
 
-    -- Defeat condition text (top-right)
     love.graphics.setColor(1,1,1,1)
     local condition = enemy_character.defeat_text or ""
     if condition ~= "" then
@@ -222,7 +198,6 @@ function battle.draw()
     end
 end
 
--- draw_player_tooltip
 function draw_player_tooltip()
     local font = love.graphics.getFont()
     local lines = {}
@@ -263,7 +238,6 @@ function draw_player_tooltip()
     love.graphics.setColor(1,1,1,1)
 end
 
--- draw_debug_panel
 function draw_debug_panel()
     local font = love.graphics.getFont()
     local lines = {
@@ -299,7 +273,6 @@ function draw_debug_panel()
     love.graphics.setColor(1,1,1,1)
 end
 
--- draw_enemy_message
 function draw_enemy_message()
     local font = love.graphics.getFont()
     local text = enemy_message_text or ""
@@ -315,7 +288,6 @@ function draw_enemy_message()
     love.graphics.print(text, x+pad, y+pad)
 end
 
--- Tooltip for enemy
 function draw_enemy_hover()
     local font = love.graphics.getFont()
     local text = enemy_character.class_name or "Enemy"
@@ -332,7 +304,6 @@ function draw_enemy_hover()
     love.graphics.print(text, tx + padding, ty + padding)
 end
 
--- draw_victory_popup
 function draw_victory_popup()
     local font = love.graphics.getFont()
     local text = victory_text ~= "" and victory_text or "Victory!"
@@ -349,11 +320,9 @@ function draw_victory_popup()
     love.graphics.print(text, x + pad, y + pad)
 end
 
--- draw_text_window
 function draw_text_window()
     local font = love.graphics.getFont()
     
-    -- Window background
     if text_window.focused then
         love.graphics.setColor(0.2, 0.2, 0.3, 0.9)
     else
@@ -361,7 +330,6 @@ function draw_text_window()
     end
     love.graphics.rectangle("fill", text_window.x, text_window.y, text_window.width, text_window.height)
     
-    -- Window border
     if text_window.focused then
         love.graphics.setColor(0.6, 0.6, 0.8, 1)
     else
@@ -370,31 +338,24 @@ function draw_text_window()
     love.graphics.setLineWidth(2)
     love.graphics.rectangle("line", text_window.x, text_window.y, text_window.width, text_window.height)
     
-    -- Title bar
     love.graphics.setColor(0.3, 0.3, 0.4, 1)
     love.graphics.rectangle("fill", text_window.x, text_window.y, text_window.width, 25)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.print("Notes", text_window.x + 5, text_window.y + 5)
     
-    -- Text area
     local text_area_x = text_window.x + 5
     local text_area_y = text_window.y + 30
     local text_area_w = text_window.width - 10
     local text_area_h = text_window.height - 35
     
-    -- Clip text to window bounds
     love.graphics.setScissor(text_area_x, text_area_y, text_area_w, text_area_h)
     
-    -- Draw text
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.printf(text_window.text, text_area_x, text_area_y, text_area_w)
     
-    -- Draw cursor if focused
     if text_window.focused then
-        -- Calculate cursor position accounting for newlines
         local text_before_cursor = string.sub(text_window.text, 1, text_window.cursor_pos)
         
-        -- Count newlines to determine line number
         local cursor_line = 0
         for i = 1, #text_before_cursor do
             if string.sub(text_before_cursor, i, i) == "\n" then
@@ -402,7 +363,6 @@ function draw_text_window()
             end
         end
         
-        -- Find the start of current line
         local line_start = 1
         local newline_pos = text_before_cursor:find("\n[^\n]*$")
         if newline_pos then
@@ -420,7 +380,6 @@ function draw_text_window()
     
     love.graphics.setScissor()
     
-    -- Resize handle
     local handle_x = text_window.x + text_window.width - text_window.resize_handle_size
     local handle_y = text_window.y + text_window.height - text_window.resize_handle_size
     love.graphics.setColor(0.5, 0.5, 0.6, 0.8)
@@ -428,10 +387,6 @@ function draw_text_window()
     
     love.graphics.setColor(1, 1, 1, 1)
 end
-
----------------------------------------------------------------------
--- INPUT HANDLERS ----------------------------------------------------
----------------------------------------------------------------------
 
 function battle.mousepressed(x,y,button)
     if victory_active then
@@ -445,11 +400,9 @@ function battle.mousepressed(x,y,button)
     if enemy_message_active then enemy_message_active=false return end
     
     if button==1 then
-        -- Check text window interactions first
         local in_window = x >= text_window.x and x <= text_window.x + text_window.width and
                          y >= text_window.y and y <= text_window.y + text_window.height
         
-        -- Check resize handle
         local handle_x = text_window.x + text_window.width - text_window.resize_handle_size
         local handle_y = text_window.y + text_window.height - text_window.resize_handle_size
         local in_handle = x >= handle_x and x <= handle_x + text_window.resize_handle_size and
@@ -460,14 +413,12 @@ function battle.mousepressed(x,y,button)
             text_window.focused = true
             return
         elseif in_window then
-            -- Check if clicking on title bar for dragging
             if y >= text_window.y and y <= text_window.y + 25 then
                 text_window.dragging = true
                 text_window.drag_offset_x = x - text_window.x
                 text_window.drag_offset_y = y - text_window.y
             end
             text_window.focused = true
-            -- Set cursor position based on click
             local text_area_x = text_window.x + 5
             local click_x = x - text_area_x
             local font = love.graphics.getFont()
@@ -481,13 +432,10 @@ function battle.mousepressed(x,y,button)
             end
             return
         else
-            -- Clicked outside window, lose focus
             text_window.focused = false
         end
         
-        -- combine button
         if x>=combine_button.x and x<=combine_button.x+combine_button.width and y>=combine_button.y and y<=combine_button.y+combine_button.height then
-            -- Similar logic as before
             print("Combine button clicked!")
             local cards_in_hand = player_hand:get_cards()
             local selected_cards = {}
@@ -498,12 +446,10 @@ function battle.mousepressed(x,y,button)
             local recipe = card_bank.find_recipe(selected_ids)
             local to_remove = {}
             if recipe then
-                -- If recipe defines custom resolution, execute it
                 if recipe.custom then
                     recipe.custom(player_hand, player_deck)
                 end
 
-                -- Standard output
                 local count = recipe.output_count or 0
                 if count > 0 and recipe.output_id then
                     for i=1,count do
@@ -511,19 +457,15 @@ function battle.mousepressed(x,y,button)
                         player_hand:add_card(new_card)
                     end
                 end
-                -- All selected cards consumed
                 to_remove = selected_cards
             else
-                -- Call per-card combine, respect consume flag
                 for _,card in ipairs(selected_cards) do
                     local consumed = card:on_combine(player_hand)
                     if consumed then table.insert(to_remove, card) end
                 end
             end
-            -- remove consumed cards
             for i = #to_remove, 1, -1 do
                 local card_obj = to_remove[i]
-                -- find index in current hand
                 for idx, hcard in ipairs(player_hand:get_cards()) do
                     if hcard == card_obj then
                         player_hand:remove_card(idx)
@@ -531,7 +473,6 @@ function battle.mousepressed(x,y,button)
                     end
                 end
             end
-            -- Deselect any remaining selected cards and reset their position
             for _, hcard in ipairs(player_hand:get_cards()) do
                 if hcard.is_clicked then
                     hcard.is_clicked = false
@@ -539,19 +480,16 @@ function battle.mousepressed(x,y,button)
                 end
             end
             player_hand:reposition_cards()
-            -- enemy reaction
             if enemy_character and enemy_character.on_player_combine then
                 local msg = enemy_character:on_player_combine(player_hand, player_deck)
                 show_enemy_message(msg)
             end
 
-            -- Check defeat condition
             if enemy_character and enemy_character.is_defeated and enemy_character:is_defeated(player_hand, player_deck) then
                 victory_text = enemy_character.class_name .. " defeated! Click to continue."
                 victory_active = true
             end
 
-            -- End player turn after combine
             current_turn = current_turn + 1
             local msg
             if enemy_character and enemy_character.on_turn_end then
@@ -559,14 +497,12 @@ function battle.mousepressed(x,y,button)
                 show_enemy_message(msg)
             end
 
-            -- Check defeat condition again after enemy turn
             if enemy_character and enemy_character.is_defeated and enemy_character:is_defeated(player_hand, player_deck) then
                 victory_text = enemy_character.class_name .. " defeated! Click to continue."
                 victory_active = true
             end
             return
         end
-        -- discard button
         if x>=discard_button.x and x<=discard_button.x+discard_button.width and y>=discard_button.y and y<=discard_button.y+discard_button.height then
             local cards_in_hand = player_hand:get_cards()
             local selected_indices = {}
@@ -576,7 +512,6 @@ function battle.mousepressed(x,y,button)
             for i=1,discard_count do local new=player_deck:draw_card(); if new then player_hand:add_card(new) end end
             return
         end
-        -- else pass to cards
         player_hand:mouse_pressed(x,y,button)
     elseif button==2 then
         player_hand:mouse_pressed(x,y,button)
@@ -586,13 +521,11 @@ end
 function battle.keypressed(key)
     if enemy_message_active and key ~= "e" then enemy_message_active=false return end
     
-    -- F1 toggles debug panel
     if key == "f1" then
         debug_visible = not debug_visible
         return
     end
     
-    -- Handle text input when window is focused
     if text_window.focused then
         if key == "backspace" then
             if text_window.cursor_pos > 0 then

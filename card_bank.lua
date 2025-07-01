@@ -1,16 +1,14 @@
 local card_bank = {}
 
--- Face images storage - loaded at runtime
 card_bank.face_images = {}
 
--- Card definitions - stores all card types by ID
 card_bank.card_types = {
     [0] = {
         name = "Empty Talisman",
         description = "A talisman awaiting inscription",
         id = 0,
         type = "Talisman",
-        face_image_path = "cards/empty-talisman.png" -- placeholder image
+        face_image_path = "cards/empty-talisman.png"
     },
     [1] = {
         name = "Seal",
@@ -63,44 +61,35 @@ card_bank.card_types = {
     }
 }
 
--- Recipe system - stores all combination definitions
 card_bank.recipes = {}
 
--- Create a card by ID
 function card_bank.create_card(id, x, y)
     local card_def = card_bank.card_types[id]
     if not card_def then
         error("Unknown card ID: " .. tostring(id))
     end
     
-    -- Get the card back image (universal for all cards)
     local back_image = CardBack
     
-    -- Get the card face image (specific to card type)
-    local face_image = card_bank.face_images[id] or CardBack  -- Fallback to back if no face image
+    local face_image = card_bank.face_images[id] or CardBack
     
     local card_type_name = card_def.type or "Unknown"
     
     if id == 0 then
-        -- Create blank card
-        return Card:new(card_def.name, card_def.description, face_image, back_image, x, y, id, card_type_name)
+        return Card(card_def.name, card_def.description, face_image, back_image, x, y, id, card_type_name)
     elseif id == 1 then
-        -- Create spawner card
-        local spawner = SpawnerCard:new(card_def.name, card_def.description, face_image, back_image, x, y)
+        local spawner = SpawnerCard(card_def.name, card_def.description, face_image, back_image, x, y)
         spawner.type = card_type_name
         return spawner
     end
     
-    -- Default to regular card for other IDs
-    return Card:new(card_def.name, card_def.description, face_image, back_image, x, y, id, card_type_name)
+    return Card(card_def.name, card_def.description, face_image, back_image, x, y, id, card_type_name)
 end
 
--- Get card type information by ID
 function card_bank.get_card_type(id)
     return card_bank.card_types[id]
 end
 
--- Register a new card type
 function card_bank.register_card_type(id, name, description)
     card_bank.card_types[id] = {
         name = name,
@@ -109,20 +98,17 @@ function card_bank.register_card_type(id, name, description)
     }
 end
 
--- Register a new recipe
 function card_bank.register_recipe(input_ids, output_id, output_count, custom_fn)
     output_count = output_count or 1
     table.insert(card_bank.recipes, {
         input_ids = input_ids,
         output_id = output_id,
         output_count = output_count,
-        custom = custom_fn -- optional custom resolution logic
+        custom = custom_fn
     })
 end
 
--- Check if a combination of card IDs matches any recipe
 function card_bank.find_recipe(input_ids)
-    -- Sort input IDs for comparison
     table.sort(input_ids)
     
     for _, recipe in ipairs(card_bank.recipes) do
@@ -132,7 +118,6 @@ function card_bank.find_recipe(input_ids)
         end
         table.sort(sorted_recipe_inputs)
         
-        -- Check if input matches recipe
         if #input_ids == #sorted_recipe_inputs then
             local match = true
             for i = 1, #input_ids do
@@ -148,20 +133,17 @@ function card_bank.find_recipe(input_ids)
         end
     end
     
-    return nil  -- No recipe found
+    return nil
 end
 
--- Get all registered card types
 function card_bank.get_all_card_types()
     return card_bank.card_types
 end
 
--- Get all registered recipes
 function card_bank.get_all_recipes()
     return card_bank.recipes
 end
 
--- Load face images for all card types
 function card_bank.load_face_images()
     for id, card_type in pairs(card_bank.card_types) do
         if card_type.face_image_path then
@@ -170,7 +152,6 @@ function card_bank.load_face_images()
     end
 end
 
--- Set a custom face image for a card type
 function card_bank.set_face_image(id, image_path)
     if card_bank.card_types[id] then
         card_bank.card_types[id].face_image_path = image_path
@@ -178,11 +159,6 @@ function card_bank.set_face_image(id, image_path)
     end
 end
 
----------------------------------------------------------------------
--- CUSTOM RECIPE HELPERS & ADDITIONAL RECIPES ------------------------
----------------------------------------------------------------------
-
--- Helper that adds N random talisman-type cards (excluding Empty Talisman) to hand
 local function add_random_talismans(hand, n)
     local talisman_ids = {}
     for id, def in pairs(card_bank.card_types) do

@@ -1,6 +1,3 @@
--- main.lua
--- Entry point that delegates Love2D callbacks to a simple scene manager
-
 local Scene = require('scene')
 local menu_scene = require('menu')
 

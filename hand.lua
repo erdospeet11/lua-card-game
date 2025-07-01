@@ -1,10 +1,9 @@
-Hand = {}
+local middleclass = require('middle_class')
 
-function Hand:new()
-    local self = {}
-    setmetatable(self, {__index = Hand})
-    self.cards = {}  -- Store cards in hand
-    return self
+local Hand = middleclass.class('Hand')
+
+function Hand:initialize()
+    self.cards = {}
 end
 
 function Hand:add_card(card)
@@ -35,7 +34,6 @@ function Hand:reposition_cards()
     local card_count = #self.cards
     if card_count == 0 then return end
     
-    -- Dynamic spacing based on number of cards
     local base_spacing = 160
     local min_spacing = 80
     local max_cards_for_full_spacing = 5
@@ -44,27 +42,22 @@ function Hand:reposition_cards()
     if card_count <= max_cards_for_full_spacing then
         card_spacing = base_spacing
     else
-        -- Reduce spacing as more cards are added
         card_spacing = math.max(min_spacing, base_spacing - (card_count - max_cards_for_full_spacing) * 10)
     end
     
-    -- Use actual card width if available, otherwise default
     local card_width = (self.cards[1] and self.cards[1].width) or 120
     
-    -- Calculate total bundle width and center position
     local bundle_width = (card_count - 1) * card_spacing + card_width
     local screen_center_x = love.graphics.getWidth() / 2
     local bundle_start_x = screen_center_x - (bundle_width / 2)
-    local bundle_y = love.graphics.getHeight() / 2 - 100  -- Center vertically
+    local bundle_y = love.graphics.getHeight() / 2 - 100
     
-    -- Reposition all cards
     for i, card in ipairs(self.cards) do
         local card_x = bundle_start_x + (i-1) * card_spacing
         card.x = card_x
         card.y = bundle_y
         card.original_y = bundle_y
         
-        -- Reset card position if it was clicked up
         if card.is_clicked then
             card.y = card.original_y - 30
         end
@@ -84,22 +77,24 @@ function Hand:update(dt)
 end
 
 function Hand:mouse_pressed(x, y, button)
-    if button == 1 then  -- Left mouse button
-        -- Check which card was clicked
+    if button == 1 then
         for _, card in ipairs(self.cards) do
             if card:in_bounds(x, y) then
                 card:click()
-                return true  -- Card was clicked
+                return true
             end
         end
-    elseif button == 2 then  -- Right mouse button
-        -- Check which card was right-clicked for flipping
+    elseif button == 2 then
         for _, card in ipairs(self.cards) do
             if card:in_bounds(x, y) then
                 card:flip()
-                return true  -- Card was flipped
+                return true
             end
         end
     end
-    return false  -- No card was clicked
-end 
+    return false
+end
+
+_G.Hand = Hand
+
+return Hand 

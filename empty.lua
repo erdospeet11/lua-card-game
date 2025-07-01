@@ -1,6 +1,3 @@
--- empty.lua
--- Placeholder scene between battles
-
 local scene_manager = require('scene')
 
 local empty = {}
@@ -21,7 +18,6 @@ end
 
 function empty.keypressed(key)
     if key == "space" then
-        -- For now, return to menu
         local menu_scene = require('menu')
         scene_manager.switch(menu_scene)
     end

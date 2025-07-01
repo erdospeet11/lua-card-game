@@ -1,18 +1,15 @@
--- scene.lua
--- Simple scene/ state manager for Love2D
-
 local scene = {}
 
 scene.current = nil
 
 function scene.switch(new_scene, ...)
-    -- Call exit on old scene
+    -- exit on old scene
     if scene.current and scene.current.exit then
         scene.current.exit()
     end
 
     scene.current = new_scene
-    -- Call enter on new scene
+    -- enter on new scene
     if scene.current and scene.current.enter then
         scene.current.enter(...)
     end

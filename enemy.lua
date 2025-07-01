@@ -1,63 +1,48 @@
-local Enemy = {}
-Enemy.__index = Enemy
+local middleclass = require('middle_class')
 
--- Constructor
-function Enemy:new(x, y, width, height)
-    local obj = {
-        x = x or 0,
-        y = y or 0,
-        width = width or 100,
-        height = height or 150,
-        class_name = "Enemy",
-        is_hovered = false
-    }
-    setmetatable(obj, self)
-    -- Defeat objective: a function that returns true when the enemy should be defeated.
-    -- It receives (player_hand, player_deck) and should return boolean.
-    -- By default, the objective is never reached (always returns false).
-    obj.objective_fn = function()
+local Enemy = middleclass.class('Enemy')
+
+function Enemy:initialize(x, y, width, height)
+    self.x = x or 0
+    self.y = y or 0
+    self.width = width or 100
+    self.height = height or 150
+    self.class_name = "Enemy"
+    self.is_hovered = false
+    
+    self.objective_fn = function()
         return false
     end
 
-    -- Internal defeated flag so that negative effects stop once objective is met
-    obj.defeated = false
+    self.defeated = false
 
-    -- Human-readable defeat condition text (for UI display)
-    obj.defeat_text = ""
+    self.defeat_text = ""
 
-    -- Random negative effect pool (can be overridden per-enemy)
-    obj.negative_effects = {
+    self.negative_effects = {
         "add_blank_card_hand",
         "add_blank_card_deck",
         "remove_random_hand",
         "remove_random_deck"
     }
     
-    -- Cached card bank reference for creating/removing cards
-    obj._card_bank = require('card_bank')
-    
-    return obj
+    self._card_bank = require('card_bank')
 end
 
--- Draw the enemy as a white rectangle (outline only)
 function Enemy:draw()
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.rectangle("fill", self.x - self.width / 2, self.y - self.height / 2, self.width, self.height)
 end
 
--- Set a custom objective function. Pass a function that takes (player_hand, player_deck) and returns boolean.
 function Enemy:set_objective(fn)
     if type(fn) == "function" then
         self.objective_fn = fn
     end
 end
 
--- Set descriptive defeat condition text
 function Enemy:set_defeat_text(text)
     self.defeat_text = text or ""
 end
 
--- Check whether the enemy is defeated. Updates internal flag and returns result.
 function Enemy:is_defeated(player_hand, player_deck)
     if self.defeated then return true end
     local ok = false
@@ -68,7 +53,6 @@ function Enemy:is_defeated(player_hand, player_deck)
     return ok
 end
 
--- Internal helper to perform a random negative effect on the player.
 function Enemy:apply_negative_effect(player_hand, player_deck)
     if self.defeated then return end
 
@@ -107,25 +91,21 @@ function Enemy:apply_negative_effect(player_hand, player_deck)
     return message
 end
 
--- Called when the player successfully combines cards.
 function Enemy:on_player_combine(player_hand, player_deck)
     if self:is_defeated(player_hand, player_deck) then return nil end
     return self:apply_negative_effect(player_hand, player_deck)
 end
 
--- Called at the end of the player's turn.
 function Enemy:on_turn_end(player_hand, player_deck)
     if self:is_defeated(player_hand, player_deck) then return nil end
     return self:apply_negative_effect(player_hand, player_deck)
 end
 
--- Helper to determine if point over enemy rectangle
 function Enemy:is_mouse_over(mx, my)
     return mx >= self.x - self.width / 2 and mx <= self.x + self.width / 2 and
            my >= self.y - self.height / 2 and my <= self.y + self.height / 2
 end
 
--- Update hover state (matches Player behaviour)
 function Enemy:update(dt, mx, my)
     if mx and my then
         self.is_hovered = self:is_mouse_over(mx, my)
