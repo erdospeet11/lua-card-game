@@ -9,6 +9,7 @@ function OccultistEnemy:initialize(x, y, width, height, required_seals)
     Enemy.initialize(self, x, y, width, height)
     self.class_name = "Occultist"
     self.required_seals = required_seals
+    self.turn_limit = 6  -- Occultist battles last 6 turns
 
     self:set_objective(function(hand, deck)
         local count = 0

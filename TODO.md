@@ -1,0 +1,3 @@
+- [ ] Find a good way to indicate the result of the combination to the player, no matter if it was successful or not.
+- [ ] Find a good way to indicate what the enemy did in its turn.
+- [ ] Find a good way to display combinations of the player.

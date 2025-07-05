@@ -17,28 +17,32 @@ local discard_button = {}
 
 local enemy_message_active = false
 local enemy_message_text = ""
-local current_turn = 1
+local current_turn = 0
+local max_turns = 7 -- Maximum turns allowed in battle
 
 local victory_active = false
 local victory_text = ""
 
+local defeat_active = false
+local defeat_text = ""
+
 local debug_visible = false
 
-local text_window = {
-    x = 100, y = 100,
-    width = 300, height = 200,
-    min_width = 150, min_height = 100,
-    text = "",
-    cursor_pos = 0,
-    focused = false,
-    dragging = false,
-    resizing = false,
-    drag_offset_x = 0,
-    drag_offset_y = 0,
-    resize_handle_size = 15
+-- Animation state variables
+local animation_state = {
+    active = false,
+    phase = "draw", -- "draw", "flip", "complete"
+    card_index = 1,
+    timer = 0,
+    draw_delay = 0.4, -- seconds between drawing cards
+    flip_delay = 0.25, -- seconds between flipping cards
+    cards_to_draw = 6,
+    pending_cards = {} -- cards waiting to be drawn
 }
 
-local draw_player_tooltip, draw_debug_panel, draw_enemy_message, draw_victory_popup, draw_text_window
+
+
+local draw_player_tooltip, draw_debug_panel, draw_enemy_message, draw_victory_popup
 
 local defeat_font = love.graphics.newFont(20)
 
@@ -47,6 +51,103 @@ local function show_enemy_message(msg)
         enemy_message_text = msg
         enemy_message_active = true
     end
+end
+
+local function start_card_animation()
+    animation_state.active = true
+    animation_state.phase = "draw"
+    animation_state.card_index = 1
+    animation_state.timer = 0
+    animation_state.pending_cards = {}
+    
+    -- Prepare cards to be drawn
+    for i = 1, animation_state.cards_to_draw do
+        local drawn = player_deck:draw_card()
+        if drawn then
+            drawn.is_face_up = false -- Start face down
+            table.insert(animation_state.pending_cards, drawn)
+        end
+    end
+end
+
+local function update_card_animation(dt)
+    if not animation_state.active then return end
+    
+    animation_state.timer = animation_state.timer + dt
+    
+    if animation_state.phase == "draw" then
+        -- Draw cards one by one
+        if animation_state.timer >= animation_state.draw_delay then
+            if animation_state.card_index <= #animation_state.pending_cards then
+                local card = animation_state.pending_cards[animation_state.card_index]
+                player_hand:add_card(card)
+                print("Card drawn: " .. card.name)
+                animation_state.card_index = animation_state.card_index + 1
+                animation_state.timer = 0
+            else
+                -- All cards drawn, start flipping phase
+                animation_state.phase = "flip"
+                animation_state.card_index = 1
+                animation_state.timer = 0
+                print("All cards drawn, starting flip phase...")
+            end
+        end
+    elseif animation_state.phase == "flip" then
+        -- Flip cards one by one
+        if animation_state.timer >= animation_state.flip_delay then
+            local hand_cards = player_hand:get_cards()
+            if animation_state.card_index <= #hand_cards then
+                local card = hand_cards[animation_state.card_index]
+                if card and not card.is_face_up then
+                    card:flip()
+                    print("Card flipped: " .. card.name)
+                end
+                animation_state.card_index = animation_state.card_index + 1
+                animation_state.timer = 0
+            else
+                -- All cards flipped, animation complete
+                animation_state.phase = "complete"
+                animation_state.active = false
+                print("Card animation complete! Player has control.")
+            end
+        end
+    end
+end
+
+local function skip_animation()
+    if not animation_state.active then return end
+    
+    -- Add any remaining cards to hand
+    if animation_state.phase == "draw" then
+        for i = animation_state.card_index, #animation_state.pending_cards do
+            local card = animation_state.pending_cards[i]
+            player_hand:add_card(card)
+        end
+    end
+    
+    -- Flip all cards to face-up
+    local hand_cards = player_hand:get_cards()
+    for _, card in ipairs(hand_cards) do
+        if not card.is_face_up then
+            card.is_face_up = true
+            card.is_flipping = false
+            card.flip_progress = 0
+        end
+    end
+    
+    -- End animation
+    animation_state.active = false
+    animation_state.phase = "complete"
+    print("Animation skipped! Player has control.")
+end
+
+local function check_defeat_condition()
+    if current_turn >= max_turns then
+        defeat_active = true
+        defeat_text = "Out of turns! " .. (enemy_character.class_name or "Enemy") .. " has won!"
+        return true
+    end
+    return false
 end
 
 function battle.enter(enemy_key)
@@ -74,10 +175,8 @@ function battle.enter(enemy_key)
     add_multiple(5, 4)
     player_deck:shuffle()
 
-    for i = 1, 6 do
-        local drawn = player_deck:draw_card()
-        if drawn then player_hand:add_card(drawn) end
-    end
+    -- Start the card drawing animation instead of drawing immediately
+    start_card_animation()
 
     combine_button.width = 120
     combine_button.height = 50
@@ -102,33 +201,43 @@ function battle.enter(enemy_key)
     local EnemyClass = enemy_map[enemy_key]
     enemy_character = EnemyClass(sw / 2, 120, 120, 160)
 
-    current_turn = 1
+    current_turn = 0  -- Start at 0, first combination brings it to turn 1
+    max_turns = 7  -- Default turn limit
+    
+    -- Set enemy-specific turn limit if available
+    if enemy_character.turn_limit then
+        max_turns = enemy_character.turn_limit
+    end
+    
+    victory_active = false
+    defeat_active = false
+    
+    print("Battle started! You have " .. max_turns .. " turns to defeat " .. (enemy_character.class_name or "Enemy"))
 end
 
 function battle.update(dt)
-    player_hand:update(dt)
+    -- Update card animation
+    update_card_animation(dt)
+    
+    player_hand:update(dt, animation_state.active)
 
     local mx, my = love.mouse.getX(), love.mouse.getY()
     player_character:update(dt, mx, my)
     if enemy_character.update then enemy_character:update(dt, mx, my) end
 
-    combine_button.is_hovered = mx >= combine_button.x and mx <= combine_button.x + combine_button.width and
-                               my >= combine_button.y and my <= combine_button.y + combine_button.height
+    -- Only update button hover states if animation is complete
+    if not animation_state.active then
+        combine_button.is_hovered = mx >= combine_button.x and mx <= combine_button.x + combine_button.width and
+                                   my >= combine_button.y and my <= combine_button.y + combine_button.height
 
-    discard_button.is_hovered = mx >= discard_button.x and mx <= discard_button.x + discard_button.width and
-                               my >= discard_button.y and my <= discard_button.y + discard_button.height
-
-    if text_window.dragging then
-        text_window.x = mx - text_window.drag_offset_x
-        text_window.y = my - text_window.drag_offset_y
+        discard_button.is_hovered = mx >= discard_button.x and mx <= discard_button.x + discard_button.width and
+                                   my >= discard_button.y and my <= discard_button.y + discard_button.height
+    else
+        combine_button.is_hovered = false
+        discard_button.is_hovered = false
     end
 
-    if text_window.resizing then
-        local new_width = mx - text_window.x
-        local new_height = my - text_window.y
-        text_window.width = math.max(text_window.min_width, new_width)
-        text_window.height = math.max(text_window.min_height, new_height)
-    end
+
 end
 
 function battle.draw()
@@ -139,6 +248,52 @@ function battle.draw()
     player_character:draw()
 
     player_hand:draw()
+    
+    -- Draw turn counter in top left
+    local font = love.graphics.getFont()
+    local remaining_turns = math.max(0, max_turns - current_turn)
+    local turn_text = string.format("Remaining Turns: %d/%d", remaining_turns, max_turns)
+    
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", 10, 10, font:getWidth(turn_text) + 20, font:getHeight() + 10)
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.rectangle("line", 10, 10, font:getWidth(turn_text) + 20, font:getHeight() + 10)
+    
+    if remaining_turns <= 2 then
+        love.graphics.setColor(1, 0.3, 0.3, 1) -- Red warning color
+    else
+        love.graphics.setColor(1, 1, 1, 1)
+    end
+    love.graphics.print(turn_text, 20, 15)
+    love.graphics.setColor(1, 1, 1, 1)
+    
+    -- Draw animation indicator
+    if animation_state.active then
+        local font = love.graphics.getFont()
+        local text = ""
+        if animation_state.phase == "draw" then
+            text = "Drawing cards..."
+        elseif animation_state.phase == "flip" then
+            text = "Revealing cards..."
+        end
+        
+        local skip_text = "Press SPACE to skip"
+        
+        local tw = math.max(font:getWidth(text), font:getWidth(skip_text))
+        local th = font:getHeight()
+        local x = love.graphics.getWidth() / 2 - tw / 2
+        local y = 50
+        
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", x - 10, y - 5, tw + 20, th * 2 + 15)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.rectangle("line", x - 10, y - 5, tw + 20, th * 2 + 15)
+        
+        love.graphics.print(text, x + (tw - font:getWidth(text)) / 2, y)
+        love.graphics.setColor(0.8, 0.8, 0.8, 1)
+        love.graphics.print(skip_text, x + (tw - font:getWidth(skip_text)) / 2, y + th + 5)
+        love.graphics.setColor(1, 1, 1, 1)
+    end
 
     local function draw_combine_button()
         if combine_button.is_hovered then
@@ -176,10 +331,11 @@ function battle.draw()
     draw_discard_button()
 
     if debug_visible then draw_debug_panel() end
-    draw_text_window()
-    if player_character.is_hovered then draw_player_tooltip() end
+    -- Only show tooltips if animation is not active
+    if not animation_state.active and player_character.is_hovered then draw_player_tooltip() end
     if enemy_message_active then draw_enemy_message() end
     if victory_active then draw_victory_popup() end
+    if defeat_active then draw_defeat_popup() end
 
     love.graphics.setColor(1,1,1,1)
     local condition = enemy_character.defeat_text or ""
@@ -320,75 +476,28 @@ function draw_victory_popup()
     love.graphics.print(text, x + pad, y + pad)
 end
 
-function draw_text_window()
+function draw_defeat_popup()
     local font = love.graphics.getFont()
-    
-    if text_window.focused then
-        love.graphics.setColor(0.2, 0.2, 0.3, 0.9)
-    else
-        love.graphics.setColor(0.15, 0.15, 0.2, 0.8)
-    end
-    love.graphics.rectangle("fill", text_window.x, text_window.y, text_window.width, text_window.height)
-    
-    if text_window.focused then
-        love.graphics.setColor(0.6, 0.6, 0.8, 1)
-    else
-        love.graphics.setColor(0.4, 0.4, 0.5, 1)
-    end
-    love.graphics.setLineWidth(2)
-    love.graphics.rectangle("line", text_window.x, text_window.y, text_window.width, text_window.height)
-    
-    love.graphics.setColor(0.3, 0.3, 0.4, 1)
-    love.graphics.rectangle("fill", text_window.x, text_window.y, text_window.width, 25)
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print("Notes", text_window.x + 5, text_window.y + 5)
-    
-    local text_area_x = text_window.x + 5
-    local text_area_y = text_window.y + 30
-    local text_area_w = text_window.width - 10
-    local text_area_h = text_window.height - 35
-    
-    love.graphics.setScissor(text_area_x, text_area_y, text_area_w, text_area_h)
-    
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.printf(text_window.text, text_area_x, text_area_y, text_area_w)
-    
-    if text_window.focused then
-        local text_before_cursor = string.sub(text_window.text, 1, text_window.cursor_pos)
-        
-        local cursor_line = 0
-        for i = 1, #text_before_cursor do
-            if string.sub(text_before_cursor, i, i) == "\n" then
-                cursor_line = cursor_line + 1
-            end
-        end
-        
-        local line_start = 1
-        local newline_pos = text_before_cursor:find("\n[^\n]*$")
-        if newline_pos then
-            line_start = newline_pos + 1
-        end
-        
-        local current_line_text = string.sub(text_before_cursor, line_start)
-        
-        local cursor_x = text_area_x + font:getWidth(current_line_text)
-        local cursor_y = text_area_y + cursor_line * font:getHeight()
-        
-        love.graphics.setColor(1, 1, 1, 0.8)
-        love.graphics.rectangle("fill", cursor_x, cursor_y, 2, font:getHeight())
-    end
-    
-    love.graphics.setScissor()
-    
-    local handle_x = text_window.x + text_window.width - text_window.resize_handle_size
-    local handle_y = text_window.y + text_window.height - text_window.resize_handle_size
-    love.graphics.setColor(0.5, 0.5, 0.6, 0.8)
-    love.graphics.rectangle("fill", handle_x, handle_y, text_window.resize_handle_size, text_window.resize_handle_size)
-    
-    love.graphics.setColor(1, 1, 1, 1)
+    local text = defeat_text ~= "" and defeat_text or "Defeat!"
+    local tw, th = font:getWidth(text), font:getHeight()
+    local pad = 20
+    local pw, ph = tw + pad*2, th + pad*2
+    local x = love.graphics.getWidth()/2 - pw/2
+    local y = love.graphics.getHeight()/2 - ph/2
+
+    love.graphics.setColor(0,0,0,0.85)
+    love.graphics.rectangle("fill", x, y, pw, ph)
+    love.graphics.setColor(1,1,1,1)
+    love.graphics.rectangle("line", x, y, pw, ph)
+    love.graphics.print(text, x + pad, y + pad)
 end
 
 function battle.mousepressed(x,y,button)
+    -- Block all input during animation
+    if animation_state.active then
+        return
+    end
+    
     if victory_active then
         if button==1 then
             victory_active=false
@@ -397,44 +506,19 @@ function battle.mousepressed(x,y,button)
         end
         return
     end
+    
+    if defeat_active then
+        if button==1 then
+            defeat_active=false
+            local MenuScene = require('menu')
+            Scene.switch(MenuScene)
+        end
+        return
+    end
+    
     if enemy_message_active then enemy_message_active=false return end
     
-    if button==1 then
-        local in_window = x >= text_window.x and x <= text_window.x + text_window.width and
-                         y >= text_window.y and y <= text_window.y + text_window.height
-        
-        local handle_x = text_window.x + text_window.width - text_window.resize_handle_size
-        local handle_y = text_window.y + text_window.height - text_window.resize_handle_size
-        local in_handle = x >= handle_x and x <= handle_x + text_window.resize_handle_size and
-                         y >= handle_y and y <= handle_y + text_window.resize_handle_size
-        
-        if in_handle then
-            text_window.resizing = true
-            text_window.focused = true
-            return
-        elseif in_window then
-            if y >= text_window.y and y <= text_window.y + 25 then
-                text_window.dragging = true
-                text_window.drag_offset_x = x - text_window.x
-                text_window.drag_offset_y = y - text_window.y
-            end
-            text_window.focused = true
-            local text_area_x = text_window.x + 5
-            local click_x = x - text_area_x
-            local font = love.graphics.getFont()
-            text_window.cursor_pos = 0
-            for i = 1, #text_window.text do
-                local width = font:getWidth(string.sub(text_window.text, 1, i))
-                if width > click_x then
-                    break
-                end
-                text_window.cursor_pos = i
-            end
-            return
-        else
-            text_window.focused = false
-        end
-        
+    if button==1 then        
         if x>=combine_button.x and x<=combine_button.x+combine_button.width and y>=combine_button.y and y<=combine_button.y+combine_button.height then
             print("Combine button clicked!")
             local cards_in_hand = player_hand:get_cards()
@@ -480,6 +564,16 @@ function battle.mousepressed(x,y,button)
                 end
             end
             player_hand:reposition_cards()
+            
+            -- Increment turn after combination
+            current_turn = current_turn + 1
+            print("Turn " .. current_turn .. " of " .. max_turns)
+            
+            -- Check for defeat first (out of turns)
+            if check_defeat_condition() then
+                return
+            end
+            
             if enemy_character and enemy_character.on_player_combine then
                 local msg = enemy_character:on_player_combine(player_hand, player_deck)
                 show_enemy_message(msg)
@@ -488,9 +582,9 @@ function battle.mousepressed(x,y,button)
             if enemy_character and enemy_character.is_defeated and enemy_character:is_defeated(player_hand, player_deck) then
                 victory_text = enemy_character.class_name .. " defeated! Click to continue."
                 victory_active = true
+                return
             end
 
-            current_turn = current_turn + 1
             local msg
             if enemy_character and enemy_character.on_turn_end then
                 msg = enemy_character:on_turn_end(player_hand, player_deck)
@@ -519,6 +613,17 @@ function battle.mousepressed(x,y,button)
 end
 
 function battle.keypressed(key)
+    -- Allow skipping animation with spacebar
+    if animation_state.active and key == "space" then
+        skip_animation()
+        return
+    end
+    
+    -- Block other keyboard input during animation (except debug keys)
+    if animation_state.active and key ~= "f1" then
+        return
+    end
+    
     if enemy_message_active and key ~= "e" then enemy_message_active=false return end
     
     if key == "f1" then
@@ -526,56 +631,25 @@ function battle.keypressed(key)
         return
     end
     
-    if text_window.focused then
-        if key == "backspace" then
-            if text_window.cursor_pos > 0 then
-                text_window.text = string.sub(text_window.text, 1, text_window.cursor_pos - 1) .. 
-                                  string.sub(text_window.text, text_window.cursor_pos + 1)
-                text_window.cursor_pos = text_window.cursor_pos - 1
-            end
-            return
-        elseif key == "delete" then
-            if text_window.cursor_pos < #text_window.text then
-                text_window.text = string.sub(text_window.text, 1, text_window.cursor_pos) .. 
-                                  string.sub(text_window.text, text_window.cursor_pos + 2)
-            end
-            return
-        elseif key == "left" then
-            text_window.cursor_pos = math.max(0, text_window.cursor_pos - 1)
-            return
-        elseif key == "right" then
-            text_window.cursor_pos = math.min(#text_window.text, text_window.cursor_pos + 1)
-            return
-        elseif key == "home" then
-            text_window.cursor_pos = 0
-            return
-        elseif key == "end" then
-            text_window.cursor_pos = #text_window.text
-            return
-        elseif key == "return" or key == "enter" then
-            local before = string.sub(text_window.text, 1, text_window.cursor_pos)
-            local after = string.sub(text_window.text, text_window.cursor_pos + 1)
-            text_window.text = before .. "\n" .. after
-            text_window.cursor_pos = text_window.cursor_pos + 1
-            return
-        end
-    end
+
 end
 
 function battle.mousereleased(x, y, button)
-    if button == 1 then
-        text_window.dragging = false
-        text_window.resizing = false
-    end
+    -- No special handling needed currently
 end
 
 function battle.textinput(text)
-    if text_window.focused then
-        local before = string.sub(text_window.text, 1, text_window.cursor_pos)
-        local after = string.sub(text_window.text, text_window.cursor_pos + 1)
-        text_window.text = before .. text .. after
-        text_window.cursor_pos = text_window.cursor_pos + #text
-    end
+    -- No text input handling needed currently
+end
+
+-- Function to check if animation is active (for external use)
+function battle.is_animation_active()
+    return animation_state.active
+end
+
+-- Function to get current animation phase (for external use)
+function battle.get_animation_phase()
+    return animation_state.phase
 end
 
 return battle 

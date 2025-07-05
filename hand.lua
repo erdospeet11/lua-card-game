@@ -70,9 +70,26 @@ function Hand:draw()
     end
 end
 
-function Hand:update(dt)
+function Hand:update(dt, animation_active)
+    animation_active = animation_active or false
+    
     for _, card in ipairs(self.cards) do
-        card:update(dt)
+        if animation_active then
+            -- During animation, only update flipping but not hovering
+            if card.is_flipping then
+                card.flip_progress = card.flip_progress + dt * card.flip_speed
+                
+                if card.flip_progress >= 1.0 then
+                    card.flip_progress = 0
+                    card.is_flipping = false
+                    card.is_face_up = not card.is_face_up
+                end
+            end
+            -- Force unhover during animation
+            card:unhover()
+        else
+            card:update(dt)
+        end
     end
 end
 

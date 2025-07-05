@@ -1,3 +1,9 @@
+SHADERS:
+https://www.shadertoy.com/view/tdG3Rd
+https://www.shadertoy.com/view/w33GRl
+https://www.shadertoy.com/view/W33GDB
+
+
 Ideas for the game:
   - you choose a starting deck of cards
 
