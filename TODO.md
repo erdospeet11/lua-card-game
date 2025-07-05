@@ -1,3 +1,8 @@
 - [ ] Find a good way to indicate the result of the combination to the player, no matter if it was successful or not.
 - [ ] Find a good way to indicate what the enemy did in its turn.
 - [ ] Find a good way to display combinations of the player.
+- [ ] Implement the other 2 encounter for the riverton scenario.
+- [ ] Implement a scenario manager with the loading bar asset
+- [ ] Riverton
+- [ ] Give player the deck they fought with in a successful scenario, so it can be used in other modes.
+- [ ] Deck editor
